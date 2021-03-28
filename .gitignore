@@ -1,3 +1,4 @@
 dce
 outputs
 .idea*
+*.DS_Store

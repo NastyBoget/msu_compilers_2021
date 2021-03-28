@@ -20,16 +20,16 @@
 
 * Неиспользуемые фи-функции нужно просто удалить (не заменять на nop).
 
-### Установка библиотеки QBE
+### Документация QBE
+
+* [Wiki](https://compilers.ispras.ru/wiki/Заглавная_страница)
+
+* [Си-интерфейс](https://compilers.ispras.ru/doxygen/index.html)
+
+### Установка библиотеки QBE (для справки, можно не делать)
 
 ```
 git clone https://compilers.ispras.ru/git/qbe.git
 cd qbe
 sudo make && sudo make install DESTDIR=/usr
 ```
-
-### Документация QBE
-
-* [Wiki](https://compilers.ispras.ru/wiki/Заглавная_страница)
-
-* [Си-интерфейс](https://compilers.ispras.ru/doxygen/index.html)

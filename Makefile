@@ -1,6 +1,6 @@
 all: dce
 dce: dce.cpp
-	g++ dce.cpp -L/usr/bin/lib -lqbe -o dce
+	g++ dce.cpp -L./lib -lqbe -I ./include -o dce
 test:
 	bash run.sh
 clean:
