@@ -1,0 +1,14 @@
+export function $bar() {
+@start
+        %x.1 =w copy 1
+        jnz %x.1, @d1, @d2
+@d1
+        %y =w copy 1
+        %x.3 =w mul %x.1, %y
+        jmp @end
+@d2
+        nop
+@end
+        %x.2 =w phi @d2 %x.1, @d1 %x.3
+        retw %x.2
+}

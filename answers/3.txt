@@ -1,0 +1,7 @@
+export function $baz() {
+@start
+        %x.2 =w copy 1
+        %w.3 =w mul %x.2, %x.2
+@end
+        retw %w.3
+}
