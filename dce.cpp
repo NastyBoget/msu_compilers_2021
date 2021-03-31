@@ -7,6 +7,7 @@ extern "C" {
 #include <stdio.h>
 #include <iostream>
 #include <set>
+#include <map>
 
 using namespace std;
 
@@ -24,6 +25,8 @@ set< pair<size_t, int> > marked_instructions;
 // множество, аналогичное множеству помеченных инструкций
 // используется на шаге mark алгоритма
 set< pair<size_t, int> > work_list;
+
+std::map< size_t, std::set<size_t> > rdf;
 
 // множество помеченных блоков программы для вычисления ближайшего помеченного постдоминатора
 set<size_t> marked_blocks;
@@ -65,7 +68,94 @@ static void readdat (Dat *dat) {
   (void) dat;
 }
 
+std::pair<size_t, int> Def(Fn *fn, Ref arg) {
+    for (Blk *blk = fn->start; blk != nullptr; blk = blk->link) {
+        for (size_t i = 0; i < blk->nins; ++i) {
+            Ins *ins = &blk->ins[i];
+            if (req(ins->to, arg)) {
+                return std::make_pair(blk->id, i);
+            }
+        }
+    }
+    return std::make_pair(0, std::numeric_limits<int>::max()); // FIXME!
+}
+
+Blk *FindByBlkId(Fn *fn, size_t blk_id) {
+    for (Blk *blk = fn->start; blk != nullptr; blk = blk->link) {
+        if (blk->id == blk_id) {
+            return blk;
+        }
+    }
+    return nullptr;
+}
+
+Ins *FindByInsId(Fn *fn, Blk *blk, size_t ins_id) {
+    (void) fn;
+    if (ins_id < blk->nins) {
+        return &blk->ins[ins_id];
+    }
+    return nullptr;
+}
+
+bool IsCritical(Fn *fn, Ins *ins) {
+    (void) fn;
+    (void) ins;
+    return true; // FIXME!
+}
+
+void Mark(Fn *fn) {
+    fillrpo(fn);
+    fillpreds(fn);
+    filluse(fn);
+    ssa(fn);
+
+    marked_instructions.clear();
+    work_list.clear();
+
+    for (Blk *blk = fn->start; blk != nullptr; blk = blk->link) {
+        for (size_t i = 0; i < blk->nins; ++i) {
+            Ins *ins = &blk->ins[i];
+            if (IsCritical(fn, ins)) {
+                marked_instructions.insert(std::make_pair(blk->id, i));
+                work_list.insert(std::make_pair(blk->id, i));
+            }
+        }
+    }
+
+    while (!work_list.empty()) {
+        Blk *blk = FindByBlkId(fn, work_list.begin()->first);
+        Ins *ins = FindByInsId(fn, blk, work_list.begin()->second);
+
+        work_list.erase(work_list.begin());
+
+        std::pair<size_t, int> def_y = Def(fn, ins->arg[0]);
+        if (def_y.second != std::numeric_limits<int>::max() && marked_instructions.find(def_y) != marked_instructions.end()) {
+            marked_instructions.insert(def_y);
+            work_list.insert(def_y);
+        }
+
+        std::pair<size_t, int> def_z = Def(fn, ins->arg[1]);
+        if (def_z.second != std::numeric_limits<int>::max() && marked_instructions.find(def_z) != marked_instructions.end()) {
+            marked_instructions.insert(def_z);
+            work_list.insert(def_z);
+        }
+
+        for (std::set<size_t>::iterator it = rdf[blk->id].begin(); it != rdf[blk->id].end(); ++it) {
+            Blk *blk_j = FindByBlkId(fn, *it);
+            std::pair<size_t, int> ins_j = std::make_pair(*it, blk_j->nins - 1);
+            if (marked_instructions.find(ins_j) != marked_instructions.end()) {
+                marked_instructions.insert(ins_j);
+                work_list.insert(ins_j);
+            }
+        }
+    }
+
+    fillpreds(fn);
+    fillrpo(fn);
+    printfn(fn, stdout);
+}
+
 int main () {
-  parse(stdin, (char *)"<stdin>", readdat, readfn);
+  parse(stdin, (char *)"<stdin>", readdat, Mark);
   freeall();
 }
