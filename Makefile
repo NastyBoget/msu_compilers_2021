@@ -1,7 +1,7 @@
 all: dce
 dce: dce.cpp
 	g++ dce.cpp -L./lib -lqbe -I ./include -o dce
-test:
+test: dce
 	bash run.sh
 clean:
 	rm -rf dce
