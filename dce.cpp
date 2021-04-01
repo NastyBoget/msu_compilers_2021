@@ -170,7 +170,7 @@ void Mark(Fn *fn) {
             for (size_t i = 0; i < 2; ++i) {
                 try {
                     std::pair<size_t, int> def = Def(fn, ins->arg[i]);
-                    if (marked_instructions.find(def) != marked_instructions.end()) {
+                    if (marked_instructions.find(def) == marked_instructions.end()) {
                         marked_instructions.insert(def);
                         work_list.insert(def);
                     }
@@ -183,7 +183,7 @@ void Mark(Fn *fn) {
         } else if (ins_id == -1) {
             try {
                 std::pair<size_t, int> def = Def(fn, blk->jmp.arg);
-                if (marked_instructions.find(def) != marked_instructions.end()) {
+                if (marked_instructions.find(def) == marked_instructions.end()) {
                     marked_instructions.insert(def);
                     work_list.insert(def);
                 }
@@ -198,7 +198,7 @@ void Mark(Fn *fn) {
             for (size_t i = 0; i < phi->narg; ++i) {
                 try {
                     std::pair<size_t, int> def = Def(fn, phi->arg[i]);
-                    if (marked_instructions.find(def) != marked_instructions.end()) {
+                    if (marked_instructions.find(def) == marked_instructions.end()) {
                         marked_instructions.insert(def);
                         work_list.insert(def);
                     }
@@ -213,7 +213,7 @@ void Mark(Fn *fn) {
         for (std::set<size_t>::iterator it = rdf[blk->id].begin(); it != rdf[blk->id].end(); ++it) {
             Blk *blk_j = FindByBlkId(fn, *it);
             std::pair<size_t, int> ins_j = std::make_pair(*it, -1);
-            if (marked_instructions.find(ins_j) != marked_instructions.end()) {
+            if (marked_instructions.find(ins_j) == marked_instructions.end()) {
                 marked_instructions.insert(ins_j);
                 work_list.insert(ins_j);
             }
