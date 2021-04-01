@@ -32,10 +32,43 @@ std::map< size_t, std::set<size_t> > rdf;
 set<size_t> marked_blocks;
 
 // заполнение множеств marked_instructions и work_list критическими инструкциями
-// 1) инструкции, возвращающие значение из процедуры
-// 2) инструкции ввода-вывода
-// 3) инструкции, влияющие на значения в доступных извне процедуры областях памяти
-static void find_critical_instructions(Fn *fn) {}
+// 1) инструкции вызова функций и передачи аргументов в них +
+// 2) инструкции записи в память +
+// 3) инструкции, возвращающие значение из функции
+// 4) фи-функции
+static void findCriticalInstructions(Fn *fn) {
+    for (Blk *blk = fn->start; blk != nullptr; blk = blk->link) {
+        for (int i = 0; i < blk->nins; ++i) {
+            Ins *ins = &blk->ins[i];
+            // инструкция вызова функции
+            if ((blk->ins[i].op == Ocall) || (blk->ins[i].op == Ovacall))
+            {
+                marked_instructions.insert(std::make_pair(blk->id, i));
+                work_list.insert(std::make_pair(blk->id, i));
+                cout << "Call: " << blk->name << " " << blk->id << " " << i << endl;
+            // инструкции передачи аргументов
+                for (int i0 = i - 1; (i0 >= 0) && (isarg(blk->ins[i0].op)); i0--)
+                {
+                    marked_instructions.insert(std::make_pair(blk->id, i));
+                    work_list.insert(std::make_pair(blk->id, i));
+                    cout << "Arguments: " << blk->name << " " << i0 << endl;
+                }
+            // инструкции записи в память
+            }
+            else if (isstore(blk->ins[i].op))
+            {
+                marked_instructions.insert(std::make_pair(blk->id, i));
+                work_list.insert(std::make_pair(blk->id, i));
+                cout << "Memory: " << blk->name << " " << i << endl;
+            }
+        }
+        if (isret(blk->jmp.type)) {
+            marked_instructions.insert(std::make_pair(blk->id, -1));
+            work_list.insert(std::make_pair(blk->id, -1));
+            cout << "Return: " << blk->name << endl;
+        }
+    }
+}
 
 static int useful(Ins* i) {
     return 0;
@@ -116,53 +149,18 @@ Phi *FindByPhiId(Fn *fn, Blk *blk, int phi_id) {
     return nullptr;
 }
 
-bool IsCriticalIns(Fn *fn, Ins *ins) {
-    (void) fn;
-    (void) ins;
-    return true; // FIXME!
-}
-
-bool IsCriticalPhi(Fn *fn, Phi *phi) {
-    (void) fn;
-    (void) phi;
-    return true; // FIXME!
-}
-
-bool IsCriticalJmp(Fn *fn, Blk *blk) {
-    (void) fn;
-    (void) blk;
-    return true; // FIXME!
-}
-
 void Mark(Fn *fn) {
     fillrpo(fn);
     fillpreds(fn);
     filluse(fn);
     ssa(fn);
 
+    printfn(fn, stdout);
+
     marked_instructions.clear();
     work_list.clear();
 
-    for (Blk *blk = fn->start; blk != nullptr; blk = blk->link) {
-        for (int i = 0; i < blk->nins; ++i) {
-            Ins *ins = &blk->ins[i];
-            if (IsCriticalIns(fn, ins)) {
-                marked_instructions.insert(std::make_pair(blk->id, i));
-                work_list.insert(std::make_pair(blk->id, i));
-            }
-        }
-        if (IsCriticalJmp(fn, blk)) {
-            marked_instructions.insert(std::make_pair(blk->id, -1));
-            work_list.insert(std::make_pair(blk->id, -1));
-        }
-        Phi *phi = blk->phi;
-        for (int i = -2; phi != nullptr; --i, phi = phi->link) {
-            if (IsCriticalPhi(fn, phi)) {
-                marked_instructions.insert(std::make_pair(blk->id, i));
-                work_list.insert(std::make_pair(blk->id, i));
-            }
-        }
-    }
+    findCriticalInstructions(fn);
 
     while (!work_list.empty()) {
         size_t blk_id = work_list.begin()->first;
@@ -181,6 +179,7 @@ void Mark(Fn *fn) {
                     if (marked_instructions.find(def) == marked_instructions.end()) {
                         marked_instructions.insert(def);
                         work_list.insert(def);
+                        cout << "From instruction: " << FindByBlkId(fn, def.first)->name << " " << def.second << endl;
                     }
                 } catch (const std::runtime_error& e) {
                     if (strcmp(e.what(), "No variable definition!") != 0) {
@@ -194,6 +193,7 @@ void Mark(Fn *fn) {
                 if (marked_instructions.find(def) == marked_instructions.end()) {
                     marked_instructions.insert(def);
                     work_list.insert(def);
+                    cout << "From jump: " << FindByBlkId(fn, def.first)->name << " " << def.second << endl;
                 }
             } catch (const std::runtime_error& e) {
                 if (strcmp(e.what(), "No variable definition!") != 0) {
@@ -209,6 +209,7 @@ void Mark(Fn *fn) {
                     if (marked_instructions.find(def) == marked_instructions.end()) {
                         marked_instructions.insert(def);
                         work_list.insert(def);
+                        cout << "From phi: " << FindByBlkId(fn, def.first)->name << " " << def.second << endl;
                     }
                 } catch (const std::runtime_error& e) {
                     if (strcmp(e.what(), "No variable definition!") != 0) {
