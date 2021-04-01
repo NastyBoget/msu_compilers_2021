@@ -77,7 +77,7 @@ std::pair<size_t, int> Def(Fn *fn, Ref arg) {
             }
         }
     }
-    return std::make_pair(0, std::numeric_limits<int>::max()); // FIXME!
+    throw std::runtime_error("No variable definition!");
 }
 
 Blk *FindByBlkId(Fn *fn, size_t blk_id) {
@@ -89,17 +89,42 @@ Blk *FindByBlkId(Fn *fn, size_t blk_id) {
     return nullptr;
 }
 
-Ins *FindByInsId(Fn *fn, Blk *blk, size_t ins_id) {
+Ins *FindByInsId(Fn *fn, Blk *blk, int ins_id) {
     (void) fn;
-    if (ins_id < blk->nins) {
+    if (ins_id >= 0 && ins_id < blk->nins) {
         return &blk->ins[ins_id];
     }
     return nullptr;
 }
 
-bool IsCritical(Fn *fn, Ins *ins) {
+Phi *FindByPhiId(Fn *fn, Blk *blk, int phi_id) {
+    (void) fn;
+    if (phi_id < -1) {
+        Phi *phi = blk->phi;
+        for (int i = -2; phi != nullptr; --i, phi = phi->link) {
+            if (i == phi_id) {
+                return phi;
+            }
+        }
+    }
+    return nullptr;
+}
+
+bool IsCriticalIns(Fn *fn, Ins *ins) {
     (void) fn;
     (void) ins;
+    return true; // FIXME!
+}
+
+bool IsCriticalPhi(Fn *fn, Phi *phi) {
+    (void) fn;
+    (void) phi;
+    return true; // FIXME!
+}
+
+bool IsCriticalJmp(Fn *fn, Blk *blk) {
+    (void) fn;
+    (void) blk;
     return true; // FIXME!
 }
 
@@ -113,36 +138,81 @@ void Mark(Fn *fn) {
     work_list.clear();
 
     for (Blk *blk = fn->start; blk != nullptr; blk = blk->link) {
-        for (size_t i = 0; i < blk->nins; ++i) {
+        for (int i = 0; i < blk->nins; ++i) {
             Ins *ins = &blk->ins[i];
-            if (IsCritical(fn, ins)) {
+            if (IsCriticalIns(fn, ins)) {
                 marked_instructions.insert(std::make_pair(blk->id, i));
                 work_list.insert(std::make_pair(blk->id, i));
             }
         }
+        if (IsCriticalJmp(fn, blk)) {
+            marked_instructions.insert(std::make_pair(blk->id, -1));
+            work_list.insert(std::make_pair(blk->id, -1));
+        }
+        Phi *phi = blk->phi;
+        for (int i = -2; phi != nullptr; --i, phi = phi->link) {
+            marked_instructions.insert(std::make_pair(blk->id, i));
+            work_list.insert(std::make_pair(blk->id, i));
+        }
     }
 
     while (!work_list.empty()) {
-        Blk *blk = FindByBlkId(fn, work_list.begin()->first);
-        Ins *ins = FindByInsId(fn, blk, work_list.begin()->second);
+        size_t blk_id = work_list.begin()->first;
+        int ins_id = work_list.begin()->second;
 
         work_list.erase(work_list.begin());
 
-        std::pair<size_t, int> def_y = Def(fn, ins->arg[0]);
-        if (def_y.second != std::numeric_limits<int>::max() && marked_instructions.find(def_y) != marked_instructions.end()) {
-            marked_instructions.insert(def_y);
-            work_list.insert(def_y);
-        }
+        Blk *blk = FindByBlkId(fn, blk_id);
 
-        std::pair<size_t, int> def_z = Def(fn, ins->arg[1]);
-        if (def_z.second != std::numeric_limits<int>::max() && marked_instructions.find(def_z) != marked_instructions.end()) {
-            marked_instructions.insert(def_z);
-            work_list.insert(def_z);
+        if (ins_id >= 0) {
+            Ins *ins = FindByInsId(fn, blk, ins_id);
+
+            for (size_t i = 0; i < 2; ++i) {
+                try {
+                    std::pair<size_t, int> def = Def(fn, ins->arg[i]);
+                    if (marked_instructions.find(def) != marked_instructions.end()) {
+                        marked_instructions.insert(def);
+                        work_list.insert(def);
+                    }
+                } catch (const std::runtime_error& e) {
+                    if (strcmp(e.what(), "No variable definition!") != 0) {
+                        throw std::runtime_error(e.what());
+                    }
+                }
+            }
+        } else if (ins_id == -1) {
+            try {
+                std::pair<size_t, int> def = Def(fn, blk->jmp.arg);
+                if (marked_instructions.find(def) != marked_instructions.end()) {
+                    marked_instructions.insert(def);
+                    work_list.insert(def);
+                }
+            } catch (const std::runtime_error& e) {
+                if (strcmp(e.what(), "No variable definition!") != 0) {
+                    throw std::runtime_error(e.what());
+                }
+            }
+        } else {
+            Phi *phi = FindByPhiId(fn, blk, ins_id);
+
+            for (size_t i = 0; i < phi->narg; ++i) {
+                try {
+                    std::pair<size_t, int> def = Def(fn, phi->arg[i]);
+                    if (marked_instructions.find(def) != marked_instructions.end()) {
+                        marked_instructions.insert(def);
+                        work_list.insert(def);
+                    }
+                } catch (const std::runtime_error& e) {
+                    if (strcmp(e.what(), "No variable definition!") != 0) {
+                        throw std::runtime_error(e.what());
+                    }
+                }
+            }
         }
 
         for (std::set<size_t>::iterator it = rdf[blk->id].begin(); it != rdf[blk->id].end(); ++it) {
             Blk *blk_j = FindByBlkId(fn, *it);
-            std::pair<size_t, int> ins_j = std::make_pair(*it, blk_j->nins - 1);
+            std::pair<size_t, int> ins_j = std::make_pair(*it, -1);
             if (marked_instructions.find(ins_j) != marked_instructions.end()) {
                 marked_instructions.insert(ins_j);
                 work_list.insert(ins_j);
