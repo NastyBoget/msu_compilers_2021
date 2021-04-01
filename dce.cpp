@@ -151,8 +151,10 @@ void Mark(Fn *fn) {
         }
         Phi *phi = blk->phi;
         for (int i = -2; phi != nullptr; --i, phi = phi->link) {
-            marked_instructions.insert(std::make_pair(blk->id, i));
-            work_list.insert(std::make_pair(blk->id, i));
+            if (IsCriticalPhi(fn, phi)) {
+                marked_instructions.insert(std::make_pair(blk->id, i));
+                work_list.insert(std::make_pair(blk->id, i));
+            }
         }
     }
 
