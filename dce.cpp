@@ -45,13 +45,17 @@ static void findCriticalInstructions(Fn *fn) {
             {
                 marked_instructions.insert(std::make_pair(blk->id, i));
                 work_list.insert(std::make_pair(blk->id, i));
+#ifdef DEBUG
                 cout << "Call: " << blk->name << " " << blk->id << " " << i << endl;
+#endif
             // инструкции передачи аргументов
                 for (int i0 = i - 1; (i0 >= 0) && (isarg(blk->ins[i0].op)); i0--)
                 {
                     marked_instructions.insert(std::make_pair(blk->id, i));
                     work_list.insert(std::make_pair(blk->id, i));
+#ifdef DEBUG
                     cout << "Arguments: " << blk->name << " " << i0 << endl;
+#endif
                 }
             // инструкции записи в память
             }
@@ -59,46 +63,23 @@ static void findCriticalInstructions(Fn *fn) {
             {
                 marked_instructions.insert(std::make_pair(blk->id, i));
                 work_list.insert(std::make_pair(blk->id, i));
+#ifdef DEBUG
                 cout << "Memory: " << blk->name << " " << i << endl;
+#endif
             }
         }
         if (isret(blk->jmp.type)) {
             marked_instructions.insert(std::make_pair(blk->id, -1));
             work_list.insert(std::make_pair(blk->id, -1));
+#ifdef DEBUG
             cout << "Return: " << blk->name << endl;
+#endif
         }
     }
 }
 
 static int useful(Ins* i) {
     return 0;
-}
-
-static void readfn (Fn *fn) {
-    fillrpo(fn);
-    fillpreds(fn);
-    filluse(fn);
-    ssa(fn);
-
-    for (Blk *blk = fn->start; blk; blk = blk->link) {
-        for (Ins *i = blk->ins; i < &blk->ins[blk->nins]; ++i) {
-            if (!useful(i)) {
-                i->op = Onop;
-                i->to = R;
-                i->arg[0] = R;
-                i->arg[1] = R;
-            }
-        }
-        
-    }
-
-    fillpreds(fn);
-    fillrpo(fn);
-    printfn(fn, stdout);
-}
-
-static void readdat (Dat *dat) {
-  (void) dat;
 }
 
 std::pair<size_t, int> Def(Fn *fn, Ref arg) {
@@ -150,15 +131,6 @@ Phi *FindByPhiId(Fn *fn, Blk *blk, int phi_id) {
 }
 
 void Mark(Fn *fn) {
-    fillrpo(fn);
-    fillpreds(fn);
-    filluse(fn);
-    ssa(fn);
-
-    printfn(fn, stdout);
-
-    marked_instructions.clear();
-    work_list.clear();
 
     findCriticalInstructions(fn);
 
@@ -179,7 +151,9 @@ void Mark(Fn *fn) {
                     if (marked_instructions.find(def) == marked_instructions.end()) {
                         marked_instructions.insert(def);
                         work_list.insert(def);
+#ifdef DEBUG
                         cout << "From instruction: " << FindByBlkId(fn, def.first)->name << " " << def.second << endl;
+#endif
                     }
                 } catch (const std::runtime_error& e) {
                     if (strcmp(e.what(), "No variable definition!") != 0) {
@@ -193,7 +167,9 @@ void Mark(Fn *fn) {
                 if (marked_instructions.find(def) == marked_instructions.end()) {
                     marked_instructions.insert(def);
                     work_list.insert(def);
+#ifdef DEBUG
                     cout << "From jump: " << FindByBlkId(fn, def.first)->name << " " << def.second << endl;
+#endif
                 }
             } catch (const std::runtime_error& e) {
                 if (strcmp(e.what(), "No variable definition!") != 0) {
@@ -209,7 +185,9 @@ void Mark(Fn *fn) {
                     if (marked_instructions.find(def) == marked_instructions.end()) {
                         marked_instructions.insert(def);
                         work_list.insert(def);
+#ifdef DEBUG
                         cout << "From phi: " << FindByBlkId(fn, def.first)->name << " " << def.second << endl;
+#endif
                     }
                 } catch (const std::runtime_error& e) {
                     if (strcmp(e.what(), "No variable definition!") != 0) {
@@ -228,13 +206,33 @@ void Mark(Fn *fn) {
             }
         }
     }
+}
+
+static void readfn (Fn *fn) {
+    fillrpo(fn);
+    fillpreds(fn);
+    filluse(fn);
+    ssa(fn);
+
+#ifdef DEBUG
+    printfn(fn, stdout);
+#endif
+
+    marked_instructions.clear();
+    work_list.clear();
+
+    Mark(fn);
 
     fillpreds(fn);
     fillrpo(fn);
     printfn(fn, stdout);
 }
 
+static void readdat (Dat *dat) {
+    (void) dat;
+}
+
 int main () {
-  parse(stdin, (char *)"<stdin>", readdat, Mark);
+  parse(stdin, (char *)"<stdin>", readdat, readfn);
   freeall();
 }
