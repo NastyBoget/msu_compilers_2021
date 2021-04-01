@@ -78,10 +78,8 @@ std::pair<size_t, int> Def(Fn *fn, Ref arg) {
         }
         Phi *phi = blk->phi;
         for (int i = -2; phi != nullptr; --i, phi = phi->link) {
-            for (size_t j = 0; j < phi->narg; ++j) {
-                if (req(phi->arg[j], arg)) {
-                    return std::make_pair(blk->id, i);
-                }
+            if (req(phi->to, arg)) {
+                return std::make_pair(blk->id, i);
             }
         }
     }
