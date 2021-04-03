@@ -1,6 +1,6 @@
 #!/bin/bash
 mkdir -p outputs
-for ((i=1; i<5; i++))
+for ((i=1; i<=5; i++))
 do
 echo ========== TEST $i ==========
 cat tests/$i.txt
