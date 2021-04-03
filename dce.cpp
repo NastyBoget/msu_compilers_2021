@@ -26,7 +26,7 @@ set< pair<size_t, int> > marked_instructions;
 // используется на шаге mark алгоритма
 set< pair<size_t, int> > work_list;
 
-std::map< size_t, std::set<size_t> > rdf;
+map< size_t, set<size_t> > rdf;
 
 // множество помеченных блоков программы для вычисления ближайшего помеченного постдоминатора
 set<size_t> marked_blocks;
@@ -208,6 +208,28 @@ void Mark(Fn *fn) {
     }
 }
 
+
+void Sweep(Fn *fn) {
+    for (Blk *blk = fn->start; blk; blk = blk->link) {
+        pair<size_t, int> inst = make_pair(blk->id, -1);
+        if (marked_instructions.find(inst) == marked_instructions.end()) {
+            blk->jmp.type = Jjmp;
+            blk->jmp.arg = R;
+        }
+
+        for (int i = 0; i < blk->nins; i++) {
+            pair<size_t, int> inst = make_pair(blk->id, i);
+            if (marked_instructions.find(inst) == marked_instructions.end()) {
+                blk->ins[i].op = Onop;
+                blk->ins[i].to = R;
+                blk->ins[i].arg[0] = R;
+                blk->ins[i].arg[1] = R;
+            }
+        }
+    }
+
+}
+
 static void readfn (Fn *fn) {
     fillrpo(fn);
     fillpreds(fn);
@@ -222,7 +244,8 @@ static void readfn (Fn *fn) {
     work_list.clear();
 
     Mark(fn);
-
+    Sweep(fn);
+    
     fillpreds(fn);
     fillrpo(fn);
     printfn(fn, stdout);
