@@ -131,17 +131,31 @@ void findRets(Blk *blk) {
     post_dom[blk] = set<Blk *>();
     post_dom_sizes[blk] = 0;
     if (blk->s1 != nullptr) {
+#ifdef DEBUG
+        std::cout << "BLOCK " << blk->name << " s1 " << blk->s1->name << endl;
+#endif
         if (used.find(blk->s1) == used.end()) {
             level++;
             findRets(blk->s1);
             level--;
+        } else {
+#ifdef DEBUG
+            std::cout << "\tUSED ALREADY" << endl;
+#endif
         }
     }
     if (blk->s2 != nullptr) {
+#ifdef DEBUG
+        std::cout << "BLOCK " << blk->name << " s2 " << blk->s2->name << endl;
+#endif
         if (used.find(blk->s2) == used.end()) {
             level++;
             findRets(blk->s2);
             level--;
+        } else {
+#ifdef DEBUG
+            std::cout << "\tUSED ALREADY" << endl;
+#endif
         }
     }
     if (blk->s1 == nullptr && blk->s2 == nullptr) {
@@ -173,9 +187,23 @@ bool updateRDomSizes() {
 
 void calcRDom(Blk *blk_start) {
     findRets(blk_start);
-    set<Blk *> used_all;
+    map<Blk *, set<Blk *> > used_all;
+    for (set<Blk *>::iterator it = ret_blocks.begin(); it != ret_blocks.end(); ++it) {
+        used_all[*it] = set<Blk *>();
+    }
+    int cnt = 0;
+#ifdef DEBUG
+    cout << "========== CalcRDOM iterations ==========" << endl;
+#endif
     do {
+        cnt++;
+#ifdef DEBUG
+        cout << "========== Iteration " << cnt << " ==========" << endl;
+#endif
         for (set<Blk *>::iterator it = ret_blocks.begin(); it != ret_blocks.end(); ++it) {
+#ifdef DEBUG
+            cout << "Block\t" << (*it)->name << endl;
+#endif
             set<Blk *> used;
             deque<Blk *> q_blocks;
             q_blocks.push_back(*it);
@@ -186,25 +214,29 @@ void calcRDom(Blk *blk_start) {
                 Blk *curr_block = q_blocks.front();
                 q_blocks.pop_front();
 
+#ifdef DEBUG
+                cout << "\tCurr " << curr_block->name << endl;
+#endif
+
                 used.insert(curr_block);
-                used_all.insert(curr_block);
-                if (curr_block->s1 != nullptr && used_all.find(curr_block->s1) != used_all.end()) {
+                used_all[*it].insert(curr_block);
+                if (curr_block->s1 != nullptr && used_all[*it].find(curr_block->s1) != used_all[*it].end()) {
                     s1 = post_dom[curr_block->s1];
                     s1.insert(curr_block->s1);
                 }
-                if (curr_block->s2 != nullptr && used_all.find(curr_block->s2) != used_all.end()) {
+                if (curr_block->s2 != nullptr && used_all[*it].find(curr_block->s2) != used_all[*it].end()) {
                     s2 = post_dom[curr_block->s2];
                     s2.insert(curr_block->s2);
                 }
                 if (curr_block->s1 != nullptr && curr_block->s2 != nullptr &&
-                    used_all.find(curr_block->s1) != used_all.end() &&
-                    used_all.find(curr_block->s2) != used_all.end()) {
+                    used_all[*it].find(curr_block->s1) != used_all[*it].end() &&
+                    used_all[*it].find(curr_block->s2) != used_all[*it].end()) {
                     set_intersection(s1.begin(), s1.end(), s2.begin(), s2.end(),
                                      inserter(intersect_pred, intersect_pred.begin()));
                     post_dom[curr_block].insert(intersect_pred.begin(), intersect_pred.end());
-                } else if (curr_block->s1 != nullptr && used_all.find(curr_block->s1) != used_all.end()) {
+                } else if (curr_block->s1 != nullptr && used_all[*it].find(curr_block->s1) != used_all[*it].end()) {
                     post_dom[curr_block].insert(s1.begin(), s1.end());
-                } else if (curr_block->s2 != nullptr && used_all.find(curr_block->s2) != used_all.end()) {
+                } else if (curr_block->s2 != nullptr && used_all[*it].find(curr_block->s2) != used_all[*it].end()) {
                     post_dom[curr_block].insert(s2.begin(), s2.end());
                 }
                 for (int i = 0; i < curr_block->npred; ++i) {
@@ -443,7 +475,7 @@ void Sweep(Fn *fn) {
 
 }
 
-static void readfn (Fn *fn) {
+static void readfn(Fn *fn) {
     fillrpo(fn);
     fillpreds(fn);
     filluse(fn);
