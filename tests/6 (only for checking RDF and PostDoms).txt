@@ -1,0 +1,25 @@
+export function w $baz() {
+@g
+      %x =w copy 1
+      %w =w mul %x, %x
+@b
+      %y =w copy 1
+      %x =w mul %x, %y
+      jnz %x, @f, @a
+@c
+      %w =w mul %x, %x
+      %x =w mul %x, %y
+      jmp @b
+@d
+      %y =w mul %x, %x
+      %x =w mul %x, %y
+      jnz %x, @e, @c
+@e
+      %z = w copy 1
+      jmp @d
+@f
+      %x =w mul %x, %y
+      jmp @d
+@a
+      ret %w
+}

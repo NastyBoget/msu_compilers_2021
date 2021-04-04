@@ -1,9 +1,9 @@
 #!/bin/bash
 mkdir -p outputs
-for ((i=1; i<=5; i++))
-do
-echo ========== TEST $i ==========
-cat tests/$i.txt
-./dce < tests/$i.txt > outputs/$i.txt
-cat outputs/$i.txt
+for file in tests/*.txt; do
+  filename=$(basename "$file")
+  echo ========== TEST "$filename" ==========
+  cat tests/"$filename"
+  ./dce <tests/"$filename" >outputs/"$filename"
+  cat outputs/"$filename"
 done
