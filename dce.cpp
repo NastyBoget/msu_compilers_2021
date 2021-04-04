@@ -346,8 +346,6 @@ Phi *FindByPhiId(Fn *fn, Blk *blk, int phi_id) {
 }
 
 void Mark(Fn *fn) {
-    fillRdf(fn->start);
-
     findCriticalInstructions(fn);
 
     while (!work_list.empty()) {
@@ -424,7 +422,28 @@ void Mark(Fn *fn) {
     }
 }
 
-static void readfn(Fn *fn) {
+void Sweep(Fn *fn) {
+    for (Blk *blk = fn->start; blk; blk = blk->link) {
+        pair<size_t, int> inst = make_pair(blk->id, -1);
+        if (marked_instructions.find(inst) == marked_instructions.end()) {
+            blk->jmp.type = Jjmp;
+            blk->jmp.arg = R;
+        }
+
+        for (int i = 0; i < blk->nins; i++) {
+            pair<size_t, int> inst = make_pair(blk->id, i);
+            if (marked_instructions.find(inst) == marked_instructions.end()) {
+                blk->ins[i].op = Onop;
+                blk->ins[i].to = R;
+                blk->ins[i].arg[0] = R;
+                blk->ins[i].arg[1] = R;
+            }
+        }
+    }
+
+}
+
+static void readfn (Fn *fn) {
     fillrpo(fn);
     fillpreds(fn);
     filluse(fn);
@@ -437,8 +456,10 @@ static void readfn(Fn *fn) {
     marked_instructions.clear();
     work_list.clear();
 
+    fillRdf(fn->start);
     Mark(fn);
-
+    Sweep(fn);
+    
     fillpreds(fn);
     fillrpo(fn);
     printfn(fn, stdout);
