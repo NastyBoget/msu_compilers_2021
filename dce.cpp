@@ -417,7 +417,7 @@ void Mark(Fn *fn) {
 
         if (ins_id >= 0) {
             Ins *ins = FindByInsId(fn, blk, ins_id);
-
+            
             for (size_t i = 0; i < 2; ++i) {
                 try {
                     std::pair<size_t, int> def = Def(fn, ins->arg[i]);
@@ -434,6 +434,18 @@ void Mark(Fn *fn) {
                     }
                 }
             }
+
+            for (std::set<Blk *>::iterator it = rdf[blk].begin(); it != rdf[blk].end(); ++it) {
+                Blk *blk_j = FindByBlkId(fn, (*it)->id);
+                std::pair<size_t, int> ins_j = std::make_pair((*it)->id, -1);
+                if (marked_instructions.find(ins_j) == marked_instructions.end()) {
+                    marked_instructions.insert(ins_j);
+                    work_list.insert(ins_j);
+#ifdef DEBUG
+                    cout << "From RDF jmp in: " << blk_j->name << endl;
+#endif               
+                }
+            }
         } else if (ins_id == -1) {
             try {
                 std::pair<size_t, int> def = Def(fn, blk->jmp.arg);
@@ -441,7 +453,7 @@ void Mark(Fn *fn) {
                     marked_instructions.insert(def);
                     work_list.insert(def);
 #ifdef DEBUG
-                    cout << "From jump: " << FindByBlkId(fn, def.first)->name << " " << def.second << endl;
+                cout << "From jump: " << FindByBlkId(fn, def.first)->name << " " << def.second << endl;
 #endif
                 }
             } catch (const std::runtime_error &e) {
@@ -470,14 +482,6 @@ void Mark(Fn *fn) {
             }
         }
 
-        for (std::set<Blk *>::iterator it = rdf[blk].begin(); it != rdf[blk].end(); ++it) {
-            Blk *blk_j = FindByBlkId(fn, (*it)->id);
-            std::pair<size_t, int> ins_j = std::make_pair((*it)->id, -1);
-            if (marked_instructions.find(ins_j) == marked_instructions.end()) {
-                marked_instructions.insert(ins_j);
-                work_list.insert(ins_j);
-            }
-        }
     }
 }
 
