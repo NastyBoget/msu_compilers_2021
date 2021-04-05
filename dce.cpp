@@ -46,6 +46,9 @@ static void findCriticalInstructions(Fn *fn) {
             if ((blk->ins[i].op == Ocall) || (blk->ins[i].op == Ovacall)) {
                 marked_instructions.insert(std::make_pair(blk->id, i));
                 work_list.insert(std::make_pair(blk->id, i));
+                if (marked_blocks.find(blk->id) == marked_blocks.end()) {
+                    marked_blocks.insert(blk->id);
+                }
 #ifdef DEBUG
                 cout << "Call: " << blk->name << " " << blk->id << " " << i << endl;
 #endif
@@ -53,6 +56,9 @@ static void findCriticalInstructions(Fn *fn) {
                 for (int i0 = i - 1; (i0 >= 0) && (isarg(blk->ins[i0].op)); i0--) {
                     marked_instructions.insert(std::make_pair(blk->id, i));
                     work_list.insert(std::make_pair(blk->id, i));
+                    if (marked_blocks.find(blk->id) == marked_blocks.end()) {
+                        marked_blocks.insert(blk->id);
+                    }
 #ifdef DEBUG
                     cout << "Arguments: " << blk->name << " " << i0 << endl;
 #endif
@@ -61,6 +67,9 @@ static void findCriticalInstructions(Fn *fn) {
             } else if (isstore(blk->ins[i].op)) {
                 marked_instructions.insert(std::make_pair(blk->id, i));
                 work_list.insert(std::make_pair(blk->id, i));
+                if (marked_blocks.find(blk->id) == marked_blocks.end()) {
+                    marked_blocks.insert(blk->id);
+                }
 #ifdef DEBUG
                 cout << "Memory: " << blk->name << " " << i << endl;
 #endif
@@ -69,6 +78,9 @@ static void findCriticalInstructions(Fn *fn) {
         if (isret(blk->jmp.type)) {
             marked_instructions.insert(std::make_pair(blk->id, -1));
             work_list.insert(std::make_pair(blk->id, -1));
+            if (marked_blocks.find(blk->id) == marked_blocks.end()) {
+                marked_blocks.insert(blk->id);
+            }
 #ifdef DEBUG
             cout << "Return: " << blk->name << endl;
 #endif
@@ -424,6 +436,9 @@ void Mark(Fn *fn) {
                     if (marked_instructions.find(def) == marked_instructions.end()) {
                         marked_instructions.insert(def);
                         work_list.insert(def);
+                        if (marked_blocks.find(def.first()) == marked_blocks.end()) {
+                            marked_blocks.insert(def.first());
+                        }
 #ifdef DEBUG
                         cout << "From instruction: " << FindByBlkId(fn, def.first)->name << " " << def.second << endl;
 #endif
@@ -441,6 +456,9 @@ void Mark(Fn *fn) {
                 if (marked_instructions.find(ins_j) == marked_instructions.end()) {
                     marked_instructions.insert(ins_j);
                     work_list.insert(ins_j);
+                    if (marked_blocks.find((*it)->id) == marked_blocks.end()) {
+                        marked_blocks.insert((*it)->id);
+                    }
 #ifdef DEBUG
                     cout << "From RDF jmp in: " << blk_j->name << endl;
 #endif               
@@ -452,6 +470,9 @@ void Mark(Fn *fn) {
                 if (marked_instructions.find(def) == marked_instructions.end()) {
                     marked_instructions.insert(def);
                     work_list.insert(def);
+                    if (marked_blocks.find(def.first()) == marked_blocks.end()) {
+                        marked_blocks.insert(def.first());
+                    }
 #ifdef DEBUG
                 cout << "From jump: " << FindByBlkId(fn, def.first)->name << " " << def.second << endl;
 #endif
@@ -470,6 +491,9 @@ void Mark(Fn *fn) {
                     if (marked_instructions.find(def) == marked_instructions.end()) {
                         marked_instructions.insert(def);
                         work_list.insert(def);
+                        if (marked_blocks.find(def.first()) == marked_blocks.end()) {
+                            marked_blocks.insert(def.first());
+                        }
 #ifdef DEBUG
                         cout << "From phi: " << FindByBlkId(fn, def.first)->name << " " << def.second << endl;
 #endif
@@ -519,6 +543,7 @@ static void readfn(Fn *fn) {
 
     marked_instructions.clear();
     work_list.clear();
+    marked_blocks.clear();
 
     fillRdf(fn->start);
     Mark(fn);
