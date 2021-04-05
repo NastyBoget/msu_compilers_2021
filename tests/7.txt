@@ -1,0 +1,21 @@
+function $test() {
+@start
+    %ten.1 =w copy 10
+    nop
+@loop
+    %alt =w phi @start 0, @left %alt1, @right %alt1
+    %cnt =w phi @start 100, @left %cnt, @right %cnt1
+    %alt1 =w sub 1, %alt
+    jnz %alt1, @right, @left
+@left
+    %x =w phi @loop 10, @left %x1
+    %x1 =w sub %x, 1
+    %z =w copy %x
+    jnz %z, @left, @loop
+@right
+    %cnt1 =w sub %cnt, %ten.1
+    jnz %cnt1, @loop, @end
+@end
+    nop
+    ret0
+}
