@@ -458,8 +458,11 @@ void Sweep(Fn *fn) {
     for (Blk *blk = fn->start; blk; blk = blk->link) {
         pair<size_t, int> inst = make_pair(blk->id, -1);
         if (marked_instructions.find(inst) == marked_instructions.end()) {
+            Blk* RIDom = rev_iDom[blk];
             blk->jmp.type = Jjmp;
             blk->jmp.arg = R;
+            blk->s1 = RIDom;
+            blk->s2 = RIDom;
         }
 
         for (int i = 0; i < blk->nins; i++) {
@@ -472,7 +475,6 @@ void Sweep(Fn *fn) {
             }
         }
     }
-
 }
 
 static void readfn(Fn *fn) {
