@@ -162,15 +162,13 @@ void findRets(Blk *blk) {
         ret_blocks.insert(blk);
     }
 #ifdef DEBUG
-    if (level == 1)
-        cout << "============ REVERSED GRAPH ============" << endl;
+    cout << "============ REVERSED GRAPH ============" << endl;
     cout << "BLOCK\t" << blk->name << endl << "\t";
     for (int i = 0; i < blk->npred; ++i) {
         cout << blk->pred[i]->name << " ";
     }
     cout << endl;
-    if (level == 1)
-        cout << "============ REVERSED GRAPH ============" << endl;
+    cout << "============ REVERSED GRAPH ============" << endl;
 #endif
 }
 
@@ -185,9 +183,21 @@ bool updateRDomSizes() {
     return changed;
 }
 
-void calcRDom(Blk *blk_start) {
-    findRets(blk_start);
+void calcRDom(Blk* blk_start) {
+    Blk* tmp_end = new Blk;
+    snprintf(tmp_end->name, 9,"@FULLEND");
+    tmp_end->s1 = tmp_end->s2 = nullptr;
+    tmp_end->npred = ret_blocks.size();
+    tmp_end->pred = new Blk* [tmp_end->npred];
+    int tmp_it = 0;
+    for (set<Blk*>::iterator el = ret_blocks.begin(); el != ret_blocks.end(); el++, tmp_it++) {
+        tmp_end->pred[tmp_it] = *el;
+        (*el)->s1 = tmp_end;
+    }
+
     map<Blk *, set<Blk *> > used_all;
+    set<Blk*> used_all1;
+
     for (set<Blk *>::iterator it = ret_blocks.begin(); it != ret_blocks.end(); ++it) {
         used_all[*it] = set<Blk *>();
     }
@@ -202,11 +212,11 @@ void calcRDom(Blk *blk_start) {
 #endif
         for (set<Blk *>::iterator it = ret_blocks.begin(); it != ret_blocks.end(); ++it) {
 #ifdef DEBUG
-            cout << "Block\t" << (*it)->name << endl;
+            cout << "Block\t" << tmp_end->name << endl;
 #endif
             set<Blk *> used;
             deque<Blk *> q_blocks;
-            q_blocks.push_back(*it);
+            q_blocks.push_back(tmp_end);
 
             while (!q_blocks.empty()) {
                 set<Blk *> intersect_pred, s1, s2;
@@ -219,24 +229,26 @@ void calcRDom(Blk *blk_start) {
 #endif
 
                 used.insert(curr_block);
-                used_all[*it].insert(curr_block);
-                if (curr_block->s1 != nullptr && used_all[*it].find(curr_block->s1) != used_all[*it].end()) {
+                used_all[tmp_end].insert(curr_block);
+                used_all1.insert(curr_block);
+                if (curr_block->s1 != nullptr && used_all1.find(curr_block->s1) != used_all1.end()) {
                     s1 = post_dom[curr_block->s1];
                     s1.insert(curr_block->s1);
                 }
-                if (curr_block->s2 != nullptr && used_all[*it].find(curr_block->s2) != used_all[*it].end()) {
+                if (curr_block->s2 != nullptr && used_all1.find(curr_block->s2) != used_all1.end()) {
                     s2 = post_dom[curr_block->s2];
                     s2.insert(curr_block->s2);
                 }
+                post_dom[curr_block].clear();
                 if (curr_block->s1 != nullptr && curr_block->s2 != nullptr &&
-                    used_all[*it].find(curr_block->s1) != used_all[*it].end() &&
-                    used_all[*it].find(curr_block->s2) != used_all[*it].end()) {
+                    used_all1.find(curr_block->s1) != used_all1.end() &&
+                    used_all1.find(curr_block->s2) != used_all1.end()) {
                     set_intersection(s1.begin(), s1.end(), s2.begin(), s2.end(),
                                      inserter(intersect_pred, intersect_pred.begin()));
                     post_dom[curr_block].insert(intersect_pred.begin(), intersect_pred.end());
-                } else if (curr_block->s1 != nullptr && used_all[*it].find(curr_block->s1) != used_all[*it].end()) {
+                } else if (curr_block->s1 != nullptr && used_all1.find(curr_block->s1) != used_all1.end()) {
                     post_dom[curr_block].insert(s1.begin(), s1.end());
-                } else if (curr_block->s2 != nullptr && used_all[*it].find(curr_block->s2) != used_all[*it].end()) {
+                } else if (curr_block->s2 != nullptr && used_all1.find(curr_block->s2) != used_all1.end()) {
                     post_dom[curr_block].insert(s2.begin(), s2.end());
                 }
                 for (int i = 0; i < curr_block->npred; ++i) {
@@ -249,8 +261,14 @@ void calcRDom(Blk *blk_start) {
     } while (updateRDomSizes());
     for (set<Blk *>::iterator it = ret_blocks.begin(); it != ret_blocks.end(); ++it) {
         post_dom[(*it)].clear();
+        (*it)->s1 = nullptr;
     }
-
+    for (Blk* blk = blk_start; blk != nullptr; blk = blk->link) {
+        post_dom[blk].erase(tmp_end);
+    }
+    post_dom.erase(tmp_end);
+    delete[] tmp_end->pred;
+    delete tmp_end;
 #ifdef DEBUG
     cout << "============== calcRDom ==============" << endl;
     for (map<Blk *, set<Blk *> >::iterator it = post_dom.begin(); it != post_dom.end(); ++it) {
@@ -294,22 +312,31 @@ void calcRIDom() {
 
 
 void fillRdf(Blk *blk_start) {
+    findRets(blk_start);
     calcRDom(blk_start);
-
+#ifdef DEBUG
+    cout << ">>>>>>>>>> FINISHED RDom <<<<<<<<<<" << endl;
+#endif
     calcRIDom();
-
+#ifdef DEBUG
+    cout << ">>>>>>>>>> FINISHED RIDom <<<<<<<<<<" << endl;
+#endif
     for (Blk *blk = blk_start; blk != nullptr; blk = blk->link) {
         rdf[blk] = set<Blk *>();
+
     }
     for (Blk *blk = blk_start; blk != nullptr; blk = blk->link) {
+#ifdef DEBUG
+        cout  << "BLOCK " << blk->name << " s1 " << ((blk->s1) ? blk->s1->name : "null") << " s2 " << ((blk->s2) ? blk->s2->name : "null") << endl;
+#endif
         if (blk->s1 != nullptr && blk->s2 != nullptr) {
             Blk *r = blk->s1;
-            while (r != rev_iDom[blk]) {
+            while (r != rev_iDom[blk] && r != nullptr) {
                 rdf[r].insert(blk);
                 r = rev_iDom[r];
             }
             r = blk->s2;
-            while (r != rev_iDom[blk]) {
+            while (r != rev_iDom[blk] && r != nullptr) {
                 rdf[r].insert(blk);
                 r = rev_iDom[r];
             }
@@ -482,7 +509,6 @@ static void readfn(Fn *fn) {
     fillpreds(fn);
     filluse(fn);
     ssa(fn);
-
 #ifdef DEBUG
     printfn(fn, stdout);
 #endif
