@@ -39,6 +39,9 @@ set<size_t> marked_blocks;
 // 3) инструкции, возвращающие значение из функции
 // 4) фи-функции
 static void findCriticalInstructions(Fn *fn) {
+    #ifdef DEBUG
+    cout << "============ FIND CRITICAL INSTRUCTIONS ============" << endl;
+#endif
     for (Blk *blk = fn->start; blk != nullptr; blk = blk->link) {
         for (int i = 0; i < blk->nins; ++i) {
             Ins *ins = &blk->ins[i];
@@ -436,8 +439,8 @@ void Mark(Fn *fn) {
                     if (marked_instructions.find(def) == marked_instructions.end()) {
                         marked_instructions.insert(def);
                         work_list.insert(def);
-                        if (marked_blocks.find(def.first()) == marked_blocks.end()) {
-                            marked_blocks.insert(def.first());
+                        if (marked_blocks.find(def.first) == marked_blocks.end()) {
+                            marked_blocks.insert(def.first);
                         }
 #ifdef DEBUG
                         cout << "From instruction: " << FindByBlkId(fn, def.first)->name << " " << def.second << endl;
@@ -470,8 +473,8 @@ void Mark(Fn *fn) {
                 if (marked_instructions.find(def) == marked_instructions.end()) {
                     marked_instructions.insert(def);
                     work_list.insert(def);
-                    if (marked_blocks.find(def.first()) == marked_blocks.end()) {
-                        marked_blocks.insert(def.first());
+                    if (marked_blocks.find(def.first) == marked_blocks.end()) {
+                        marked_blocks.insert(def.first);
                     }
 #ifdef DEBUG
                 cout << "From jump: " << FindByBlkId(fn, def.first)->name << " " << def.second << endl;
@@ -491,8 +494,8 @@ void Mark(Fn *fn) {
                     if (marked_instructions.find(def) == marked_instructions.end()) {
                         marked_instructions.insert(def);
                         work_list.insert(def);
-                        if (marked_blocks.find(def.first()) == marked_blocks.end()) {
-                            marked_blocks.insert(def.first());
+                        if (marked_blocks.find(def.first) == marked_blocks.end()) {
+                            marked_blocks.insert(def.first);
                         }
 #ifdef DEBUG
                         cout << "From phi: " << FindByBlkId(fn, def.first)->name << " " << def.second << endl;
@@ -513,7 +516,12 @@ void Sweep(Fn *fn) {
     for (Blk *blk = fn->start; blk; blk = blk->link) {
         pair<size_t, int> inst = make_pair(blk->id, -1);
         if (marked_instructions.find(inst) == marked_instructions.end()) {
+            // cout << "USELESS   BLOCK: " << blk->name << "; inst: -1\n";
             Blk* RIDom = rev_iDom[blk];
+            while (marked_blocks.find(RIDom->id) == marked_blocks.end()) {
+                //cout << "NEXT RIDOM\n";
+                RIDom = rev_iDom[RIDom];
+            }
             blk->jmp.type = Jjmp;
             blk->jmp.arg = R;
             blk->s1 = RIDom;
@@ -523,6 +531,7 @@ void Sweep(Fn *fn) {
         for (int i = 0; i < blk->nins; i++) {
             pair<size_t, int> inst = make_pair(blk->id, i);
             if (marked_instructions.find(inst) == marked_instructions.end()) {
+                //cout << "USELESS   BLOCK: " << blk->name << "; inst: " << i << "\n";
                 blk->ins[i].op = Onop;
                 blk->ins[i].to = R;
                 blk->ins[i].arg[0] = R;
