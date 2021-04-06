@@ -57,8 +57,8 @@ static void findCriticalInstructions(Fn *fn) {
 #endif
                 // инструкции передачи аргументов
                 for (int i0 = i - 1; (i0 >= 0) && (isarg(blk->ins[i0].op)); i0--) {
-                    marked_instructions.insert(std::make_pair(blk->id, i));
-                    work_list.insert(std::make_pair(blk->id, i));
+                    marked_instructions.insert(std::make_pair(blk->id, i0));
+                    work_list.insert(std::make_pair(blk->id, i0));
                     if (marked_blocks.find(blk->id) == marked_blocks.end()) {
                         marked_blocks.insert(blk->id);
                     }
