@@ -39,7 +39,7 @@ set<size_t> marked_blocks;
 // 3) инструкции, возвращающие значение из функции
 // 4) фи-функции
 static void findCriticalInstructions(Fn *fn) {
-    #ifdef DEBUG
+#ifdef DEBUG
     cout << "============ FIND CRITICAL INSTRUCTIONS ============" << endl;
 #endif
     for (Blk *blk = fn->start; blk != nullptr; blk = blk->link) {
@@ -198,20 +198,20 @@ bool updateRDomSizes() {
     return changed;
 }
 
-void calcRDom(Blk* blk_start) {
-    Blk* tmp_end = new Blk;
-    snprintf(tmp_end->name, 9,"@FULLEND");
+void calcRDom(Blk *blk_start) {
+    Blk *tmp_end = new Blk;
+    snprintf(tmp_end->name, 9, "@FULLEND");
     tmp_end->s1 = tmp_end->s2 = nullptr;
     tmp_end->npred = ret_blocks.size();
-    tmp_end->pred = new Blk* [tmp_end->npred];
+    tmp_end->pred = new Blk *[tmp_end->npred];
     int tmp_it = 0;
-    for (set<Blk*>::iterator el = ret_blocks.begin(); el != ret_blocks.end(); el++, tmp_it++) {
+    for (set<Blk *>::iterator el = ret_blocks.begin(); el != ret_blocks.end(); el++, tmp_it++) {
         tmp_end->pred[tmp_it] = *el;
         (*el)->s1 = tmp_end;
     }
 
     map<Blk *, set<Blk *> > used_all;
-    set<Blk*> used_all1;
+    set<Blk *> used_all1;
 
     for (set<Blk *>::iterator it = ret_blocks.begin(); it != ret_blocks.end(); ++it) {
         used_all[*it] = set<Blk *>();
@@ -225,51 +225,64 @@ void calcRDom(Blk* blk_start) {
 #ifdef DEBUG
         cout << "========== Iteration " << cnt << " ==========" << endl;
 #endif
-        for (set<Blk *>::iterator it = ret_blocks.begin(); it != ret_blocks.end(); ++it) {
 #ifdef DEBUG
-            cout << "Block\t" << tmp_end->name << endl;
+        cout << "Block\t" << tmp_end->name << endl;
 #endif
-            set<Blk *> used;
-            deque<Blk *> q_blocks;
-            q_blocks.push_back(tmp_end);
+        set<Blk *> used;
+        deque<Blk *> q_blocks;
+        q_blocks.push_back(tmp_end);
 
-            while (!q_blocks.empty()) {
-                set<Blk *> intersect_pred, s1, s2;
+        while (!q_blocks.empty()) {
+            set<Blk *> intersect_pred, s1, s2;
 
-                Blk *curr_block = q_blocks.front();
-                q_blocks.pop_front();
+            Blk *curr_block = q_blocks.front();
+            q_blocks.pop_front();
 
 #ifdef DEBUG
-                cout << "\tCurr " << curr_block->name << endl;
+            cout << "\tCurr " << curr_block->name << endl;
+            cout << "\t";
+            for (set<Blk *>::iterator it_deb = post_dom[curr_block].begin();
+                 it_deb != post_dom[curr_block].end(); ++it_deb) {
+                cout << (*it_deb)->name << " ";
+            }
+            cout << endl;
 #endif
 
-                used.insert(curr_block);
-                used_all[tmp_end].insert(curr_block);
-                used_all1.insert(curr_block);
-                if (curr_block->s1 != nullptr && used_all1.find(curr_block->s1) != used_all1.end()) {
-                    s1 = post_dom[curr_block->s1];
-                    s1.insert(curr_block->s1);
-                }
-                if (curr_block->s2 != nullptr && used_all1.find(curr_block->s2) != used_all1.end()) {
-                    s2 = post_dom[curr_block->s2];
-                    s2.insert(curr_block->s2);
-                }
-                post_dom[curr_block].clear();
-                if (curr_block->s1 != nullptr && curr_block->s2 != nullptr &&
-                    used_all1.find(curr_block->s1) != used_all1.end() &&
-                    used_all1.find(curr_block->s2) != used_all1.end()) {
-                    set_intersection(s1.begin(), s1.end(), s2.begin(), s2.end(),
-                                     inserter(intersect_pred, intersect_pred.begin()));
-                    post_dom[curr_block].insert(intersect_pred.begin(), intersect_pred.end());
-                } else if (curr_block->s1 != nullptr && used_all1.find(curr_block->s1) != used_all1.end()) {
-                    post_dom[curr_block].insert(s1.begin(), s1.end());
-                } else if (curr_block->s2 != nullptr && used_all1.find(curr_block->s2) != used_all1.end()) {
-                    post_dom[curr_block].insert(s2.begin(), s2.end());
-                }
-                for (int i = 0; i < curr_block->npred; ++i) {
-                    if (used.find(curr_block->pred[i]) == used.end()) {
-                        q_blocks.push_back(curr_block->pred[i]);
-                    }
+            if (curr_block->s1 != nullptr && used_all1.find(curr_block->s1) != used_all1.end()) {
+                s1 = post_dom[curr_block->s1];
+                s1.insert(curr_block->s1);
+            }
+            if (curr_block->s2 != nullptr && used_all1.find(curr_block->s2) != used_all1.end()) {
+                s2 = post_dom[curr_block->s2];
+                s2.insert(curr_block->s2);
+            }
+            post_dom[curr_block].clear();
+            if (curr_block->s1 != nullptr && curr_block->s2 != nullptr &&
+                used_all1.find(curr_block->s1) != used_all1.end() &&
+                used_all1.find(curr_block->s2) != used_all1.end()) {
+                set_intersection(s1.begin(), s1.end(), s2.begin(), s2.end(),
+                                 inserter(intersect_pred, intersect_pred.begin()));
+                post_dom[curr_block].insert(intersect_pred.begin(), intersect_pred.end());
+            } else if (curr_block->s1 != nullptr && used_all1.find(curr_block->s1) != used_all1.end()) {
+                post_dom[curr_block].insert(s1.begin(), s1.end());
+            } else if (curr_block->s2 != nullptr && used_all1.find(curr_block->s2) != used_all1.end()) {
+                post_dom[curr_block].insert(s2.begin(), s2.end());
+            }
+#ifdef DEBUG
+            cout << "\tCurr out " << curr_block->name << endl;
+            cout << "\t";
+            for (set<Blk *>::iterator it_deb = post_dom[curr_block].begin();
+                 it_deb != post_dom[curr_block].end(); ++it_deb) {
+                cout << (*it_deb)->name << " ";
+            }
+            cout << endl;
+#endif
+            used.insert(curr_block);
+            used_all[tmp_end].insert(curr_block);
+            used_all1.insert(curr_block);
+            for (int i = 0; i < curr_block->npred; ++i) {
+                if (used.find(curr_block->pred[i]) == used.end()) {
+                    q_blocks.push_back(curr_block->pred[i]);
                 }
             }
         }
@@ -278,7 +291,7 @@ void calcRDom(Blk* blk_start) {
         post_dom[(*it)].clear();
         (*it)->s1 = nullptr;
     }
-    for (Blk* blk = blk_start; blk != nullptr; blk = blk->link) {
+    for (Blk *blk = blk_start; blk != nullptr; blk = blk->link) {
         post_dom[blk].erase(tmp_end);
     }
     post_dom.erase(tmp_end);
@@ -342,7 +355,8 @@ void fillRdf(Blk *blk_start) {
     }
     for (Blk *blk = blk_start; blk != nullptr; blk = blk->link) {
 #ifdef DEBUG
-        cout  << "BLOCK " << blk->name << " s1 " << ((blk->s1) ? blk->s1->name : "null") << " s2 " << ((blk->s2) ? blk->s2->name : "null") << endl;
+        cout << "BLOCK " << blk->name << " s1 " << ((blk->s1) ? blk->s1->name : "null") << " s2 "
+             << ((blk->s2) ? blk->s2->name : "null") << endl;
 #endif
         if (blk->s1 != nullptr && blk->s2 != nullptr) {
             Blk *r = blk->s1;
@@ -432,7 +446,7 @@ void Mark(Fn *fn) {
 
         if (ins_id >= 0) {
             Ins *ins = FindByInsId(fn, blk, ins_id);
-            
+
             for (size_t i = 0; i < 2; ++i) {
                 try {
                     std::pair<size_t, int> def = Def(fn, ins->arg[i]);
@@ -464,7 +478,7 @@ void Mark(Fn *fn) {
                     }
 #ifdef DEBUG
                     cout << "From RDF jmp in: " << blk_j->name << endl;
-#endif               
+#endif
                 }
             }
         } else if (ins_id == -1) {
@@ -477,7 +491,7 @@ void Mark(Fn *fn) {
                         marked_blocks.insert(def.first);
                     }
 #ifdef DEBUG
-                cout << "From jump: " << FindByBlkId(fn, def.first)->name << " " << def.second << endl;
+                    cout << "From jump: " << FindByBlkId(fn, def.first)->name << " " << def.second << endl;
 #endif
                 }
             } catch (const std::runtime_error &e) {
@@ -517,7 +531,7 @@ void Sweep(Fn *fn) {
         pair<size_t, int> inst = make_pair(blk->id, -1);
         if (marked_instructions.find(inst) == marked_instructions.end()) {
             // cout << "USELESS   BLOCK: " << blk->name << "; inst: -1\n";
-            Blk* RIDom = rev_iDom[blk];
+            Blk *RIDom = rev_iDom[blk];
             while (marked_blocks.find(RIDom->id) == marked_blocks.end()) {
                 //cout << "NEXT RIDOM\n";
                 RIDom = rev_iDom[RIDom];
@@ -557,7 +571,7 @@ static void readfn(Fn *fn) {
     fillRdf(fn->start);
     Mark(fn);
     Sweep(fn);
-    
+
     fillpreds(fn);
     fillrpo(fn);
     printfn(fn, stdout);
