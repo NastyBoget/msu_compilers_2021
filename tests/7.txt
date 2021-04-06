@@ -1,7 +1,11 @@
+# an example with reducible control
+# flow graph that exposes poor
+# handling of looping constructs
+
 function $test() {
 @start
-    %ten.1 =w copy 10
-    nop
+    %ten =w copy 10
+    %dum =w copy 0  # dummy live-through temporary
 @loop
     %alt =w phi @start 0, @left %alt1, @right %alt1
     %cnt =w phi @start 100, @left %cnt, @right %cnt1
@@ -13,9 +17,9 @@ function $test() {
     %z =w copy %x
     jnz %z, @left, @loop
 @right
-    %cnt1 =w sub %cnt, %ten.1
+    %cnt1 =w sub %cnt, %ten
     jnz %cnt1, @loop, @end
 @end
-    nop
-    ret0
+    %ret =w add %cnt, %dum
+    ret # hmm, ret %ret?
 }
