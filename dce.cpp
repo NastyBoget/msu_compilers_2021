@@ -91,10 +91,6 @@ static void findCriticalInstructions(Fn *fn) {
     }
 }
 
-static int useful(Ins *i) {
-    return 0;
-}
-
 map<Blk *, set<Blk *> > rb; // reachable blocks
 void calcRB(Blk *blk) {
     static set<Blk *> used;
@@ -477,7 +473,7 @@ void Mark(Fn *fn) {
                         marked_blocks.insert((*it)->id);
                     }
 #ifdef DEBUG
-                    cout << "From RDF jmp in: " << blk_j->name << endl;
+                    cout << "From RDF jmp from " << blk->name << " to " << blk_j->name << endl;
 #endif
                 }
             }
@@ -497,6 +493,20 @@ void Mark(Fn *fn) {
             } catch (const std::runtime_error &e) {
                 if (strcmp(e.what(), "No variable definition!") != 0) {
                     throw std::runtime_error(e.what());
+                }
+            }
+            for (std::set<Blk *>::iterator it = rdf[blk].begin(); it != rdf[blk].end(); ++it) {
+                Blk *blk_j = FindByBlkId(fn, (*it)->id);
+                std::pair<size_t, int> ins_j = std::make_pair((*it)->id, -1);
+                if (marked_instructions.find(ins_j) == marked_instructions.end()) {
+                    marked_instructions.insert(ins_j);
+                    work_list.insert(ins_j);
+                    if (marked_blocks.find((*it)->id) == marked_blocks.end()) {
+                        marked_blocks.insert((*it)->id);
+                    }
+#ifdef DEBUG
+                    cout << "From RDF jmp from " << blk->name << " to " << blk_j->name << endl;
+#endif
                 }
             }
         } else {
@@ -530,10 +540,10 @@ void Sweep(Fn *fn) {
     for (Blk *blk = fn->start; blk; blk = blk->link) {
         pair<size_t, int> inst = make_pair(blk->id, -1);
         if (marked_instructions.find(inst) == marked_instructions.end()) {
-            // cout << "USELESS   BLOCK: " << blk->name << "; inst: -1\n";
+            // cout << "USELESS   BLOCK: " << blk->name << " " << blk->id << "; inst: -1\n";
             Blk *RIDom = rev_iDom[blk];
             while (marked_blocks.find(RIDom->id) == marked_blocks.end()) {
-                //cout << "NEXT RIDOM\n";
+                // cout << "NEXT RIDOM\n";
                 RIDom = rev_iDom[RIDom];
             }
             blk->jmp.type = Jjmp;
