@@ -28,6 +28,7 @@ set<pair<size_t, int> > marked_instructions;
 // используется на шаге mark алгоритма
 set<pair<size_t, int> > work_list;
 
+// обратная граница доминирования
 std::map<Blk *, std::set<Blk *> > rdf;
 
 // множество помеченных блоков программы для вычисления ближайшего помеченного постдоминатора
@@ -37,7 +38,6 @@ set<size_t> marked_blocks;
 // 1) инструкции вызова функций и передачи аргументов в них +
 // 2) инструкции записи в память +
 // 3) инструкции, возвращающие значение из функции
-// 4) фи-функции
 static void findCriticalInstructions(Fn *fn) {
 #ifdef DEBUG
     cout << "============ FIND CRITICAL INSTRUCTIONS ============" << endl;
@@ -540,13 +540,17 @@ void Sweep(Fn *fn) {
     for (Blk *blk = fn->start; blk; blk = blk->link) {
         pair<size_t, int> inst = make_pair(blk->id, -1);
         if (marked_instructions.find(inst) == marked_instructions.end()) {
-            // cout << "USELESS   BLOCK: " << blk->name << " " << blk->id << "; inst: -1\n";
+#ifdef DEBUG
+             cout << "USELESS   BLOCK: " << blk->name << " " << blk->id << "; inst: -1\n";
+#endif
             Blk *RIDom = rev_iDom[blk];
             if ((blk->s1->id == blk->id + 1) && ((blk->nins == 0) || (blk->s1->nins == 0))) {
                 continue;
             }
             while (marked_blocks.find(RIDom->id) == marked_blocks.end()) {
-                // cout << "NEXT RIDOM\n";
+#ifdef DEBUG
+                 cout << "NEXT RIDOM\n";
+#endif
                 RIDom = rev_iDom[RIDom];
             }
             blk->jmp.type = Jjmp;
@@ -558,7 +562,9 @@ void Sweep(Fn *fn) {
         for (int i = 0; i < blk->nins; i++) {
             pair<size_t, int> inst = make_pair(blk->id, i);
             if (marked_instructions.find(inst) == marked_instructions.end()) {
-                //cout << "USELESS   BLOCK: " << blk->name << "; inst: " << i << "\n";
+#ifdef DEBUG
+                cout << "USELESS   BLOCK: " << blk->name << "; inst: " << i << "\n";
+#endif
                 blk->ins[i].op = Onop;
                 blk->ins[i].to = R;
                 blk->ins[i].arg[0] = R;
