@@ -542,6 +542,9 @@ void Sweep(Fn *fn) {
         if (marked_instructions.find(inst) == marked_instructions.end()) {
             // cout << "USELESS   BLOCK: " << blk->name << " " << blk->id << "; inst: -1\n";
             Blk *RIDom = rev_iDom[blk];
+            if ((blk->s1->id == blk->id + 1) && ((blk->nins == 0) || (blk->s1->nins == 0))) {
+                continue;
+            }
             while (marked_blocks.find(RIDom->id) == marked_blocks.end()) {
                 // cout << "NEXT RIDOM\n";
                 RIDom = rev_iDom[RIDom];
